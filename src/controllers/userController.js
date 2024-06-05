@@ -1,6 +1,10 @@
 const User = require('../models/User');
 const bcrypt = require("bcryptjs");
+const path = require('path');
+const PDFDocument = require('pdfkit');
 const jwt = require('jsonwebtoken');
+const fs = require('fs');
+const sequelize = require('../config/database');
 
 exports.getAllUsers = async (req, res) => {
   try {
@@ -74,7 +78,7 @@ exports.login = async (req,res) => {
       // comparing given password with hashed password
       bcrypt.compare(password, user.password).then(function (result) {
         if(result){
-          const maxAge = 3 * 60 * 60;
+          const maxAge = 20;
           const token = jwt.sign(
             { id: user._id, email:email },
             process.env.jwtSecret,
@@ -82,13 +86,10 @@ exports.login = async (req,res) => {
               expiresIn: maxAge, // 3hrs in sec
             }
           );
-          res.cookie("jwt", token, {
-            httpOnly: true,
-            maxAge: maxAge * 1000, // 3hrs in ms
-          });
           res.status(200).json({
               message: "Login successful",
               user,
+              jwt:token,
             })
         }else{
           res.status(400).json({ message: "Login not succesful" })
@@ -102,3 +103,41 @@ exports.login = async (req,res) => {
     })
   }
 }
+
+exports.pdf = async (req, res) => {
+  try {
+    const [results, metadata] = await sequelize.query("SELECT * FROM types");
+    // console.log(results);
+
+    const doc = new PDFDocument();
+    const filePath = path.join(__dirname, 'output.pdf');
+    const writeStream = fs.createWriteStream(filePath);
+
+    doc.pipe(writeStream);
+
+    // Add content to the PDF
+    doc.fontSize(20).text('Types Data', { align: 'center' });
+    doc.moveDown();
+
+    // Assuming 'results' is an array of objects
+    results.forEach((type) => {
+      doc.fontSize(12).text(`ID: ${type.id}, Name: ${type.name}`);
+      doc.moveDown();
+    });
+
+    doc.end();
+
+    writeStream.on('finish', () => {
+      res.download(filePath, 'output.pdf', (err) => {
+        if (err) {
+          console.error('Error downloading the file:', err);
+          res.status(500).send('Error downloading the file');
+        }
+        fs.unlinkSync(filePath); // Clean up the file after sending it
+      });
+    });
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    res.status(500).send('Error generating PDF');
+  }
+};
