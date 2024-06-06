@@ -6,14 +6,14 @@ const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const sequelize = require('../config/database');
 
-exports.getAllUsers = async (req, res) => {
-  try {
-    const users = await User.findAll();
-    res.json(users);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
+// exports.getAllUsers = async (req, res) => {
+//   try {
+//     const users = await User.findAll();
+//     res.json(users);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// };
 
 exports.createUser = async (req, res) => {
   try {
@@ -46,18 +46,18 @@ exports.createUser = async (req, res) => {
   }
 };
 
-exports.getUser = async (req, res) => {
-  try {
-    const {email} = req.query;
-    console.log(req.query)
-    const user = await User.findOne({ where: {
-      email: email,
-    } });
-    res.status(201).json(user);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
+// exports.getUser = async (req, res) => {
+//   try {
+//     const {email} = req.query;
+//     console.log(req.query)
+//     const user = await User.findOne({ where: {
+//       email: email,
+//     } });
+//     res.status(201).json(user);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// };
 
 exports.login = async (req,res) => {
   const { email, password } = req.body
@@ -68,7 +68,9 @@ exports.login = async (req,res) => {
     })
   }
   try {
-    const user = await User.findOne({ email })
+    const user = await User.findOne({   where: {
+      email: email
+    } })
     if (!user) {
       res.status(400).json({
         message: "Login not successful",
@@ -115,11 +117,10 @@ exports.pdf = async (req, res) => {
 
     doc.pipe(writeStream);
 
-    // Add content to the PDF
+  
     doc.fontSize(20).text('Types Data', { align: 'center' });
     doc.moveDown();
 
-    // Assuming 'results' is an array of objects
     results.forEach((type) => {
       doc.fontSize(12).text(`ID: ${type.id}, Name: ${type.name}`);
       doc.moveDown();
